@@ -1,0 +1,110 @@
+.otp-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #eef2f7, #dfe9f3);
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.otp-card {
+  width: 440px;
+  max-width: 90vw;
+  text-align: center;
+  padding: 34px 32px;
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  background: #fff;
+}
+
+.otp-desc {
+  margin-top: 6px;
+  color: #6b7280;
+  display: block;
+}
+
+/* PROGRESS */
+.otp-progress {
+  margin-top: 18px;
+  width: 100%;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #2ecc71);
+  transition: width 0.4s ease;
+}
+
+/* INPUT GROUP FIX LỆCH */
+.otp-input-group {
+  margin-top: 26px;
+  display: flex;
+  justify-content: center;   /* fix chính */
+  gap: 12px;                 /* khoảng cách đều */
+}
+
+/* INPUT */
+.otp-input {
+  width: 52px;
+  height: 60px;
+  text-align: center;
+  font-size: 24px;
+  border: 2px solid #d1d5db;
+  border-radius: 14px;
+  font-weight: 600;
+  transition: all 0.25s ease;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
+    outline: none;
+  }
+}
+
+.otp-input.filled {
+  border-color: transparent;
+  background: linear-gradient(#fff, #fff) padding-box,
+              linear-gradient(135deg, #ff2d55, #ff6b81) border-box;
+}
+
+.otp-input.active {
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.4);
+}
+
+/* SHAKE */
+@keyframes shakeAnim {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+.shake {
+  animation: shakeAnim 0.35s ease;
+}
+
+.otp-resend {
+  margin-top: 16px;
+}
+
+.otp-btn-resend {
+  background: none;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 0;
+  text-decoration: underline;
+
+  &:hover {
+    color: #1d4ed8;
+  }
+}
