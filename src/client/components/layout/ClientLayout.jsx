@@ -9,6 +9,7 @@ import { useSelector } from "react-redux";
 const ClientLayout = () => {
   const { Header } = Layout;
   const auth = useSelector((store) => store.auth);
+  console.log(auth);
   return (
     <>
       <Header

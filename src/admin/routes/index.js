@@ -209,21 +209,51 @@ const routesAdmin = [
           }
         ]
       },
+      // {
+      //   path: "flights",
+      //   element: <Flight />,
+      //   children: [
+      //     {
+      //       index: true,
+      //       element: <FlightList/>
+      //     },
+      //     {
+      //       path: "create",
+      //       element: <FlightCreate/>
+      //     },
+      //     {
+      //       path: "edit/:id",
+      //       element: <FlightEdit/>
+      //     }
+      //   ]
+      // }
       {
         path: "flights",
-        element: <Flight />,
+        element: (
+          <RequirePermission required="flight.view" />
+        ),
         children: [
           {
             index: true,
-            element: <FlightList/>
+            element: <FlightList />,
           },
+
+          // CREATE
           {
             path: "create",
-            element: <FlightCreate/>
+            element: <RequirePermission required="flight.create" />,
+            children: [
+              { index: true, element: <FlightCreate /> }
+            ]
           },
+
+          // EDIT
           {
             path: "edit/:id",
-            element: <FlightEdit/>
+            element: <RequirePermission required="flight.edit" />,
+            children: [
+              { index: true, element: <FlightEdit /> }
+            ]
           }
         ]
       }
