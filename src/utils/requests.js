@@ -1,14 +1,13 @@
 import Cookies from 'js-cookie';
+import refreshToken from '../shared/helper/refreshToken';
 
 const API_SERVER = process.env.REACT_APP_API_URL;
 
-// Lấy token từ cookie (ưu tiên admin)
 const getAuthHeader = () => {
   const token = Cookies.get('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// Timeout helper (nếu server không phản hồi)
 const fetchWithTimeout = async (url, options, timeout = 10000) => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
@@ -20,17 +19,15 @@ const fetchWithTimeout = async (url, options, timeout = 10000) => {
     if (err.name === 'AbortError') {
       throw new Error('Request timeout. Vui lòng thử lại sau.');
     }
-    throw err;
+    throw err; 
   } finally {
     clearTimeout(id);
   }
 };
 
-// Hàm request chính
 const request = async (method, path, data, extraHeaders = {}) => {
   let url = API_SERVER + path;
 
-  // Xử lý query string cho GET / DELETE
   const isQuery = (method === 'GET' || method === 'DELETE') && data && typeof data === 'object';
   if (isQuery) {
     const filtered = Object.fromEntries(
@@ -43,7 +40,7 @@ const request = async (method, path, data, extraHeaders = {}) => {
   // Cấu hình fetch options
   const options = {
     method,
-    // credentials: 'include',
+    credentials: 'include',
     headers: {
       Accept: 'application/json',
       ...getAuthHeader(),
@@ -54,7 +51,6 @@ const request = async (method, path, data, extraHeaders = {}) => {
   // Body cho POST / PATCH
   const hasBody = ['POST', 'PATCH', 'PUT'].includes(method);
   if (hasBody && data) {
-    // Nếu có FormData (upload file) → không set Content-Type thủ công
     if (data instanceof FormData) {
       options.body = data;
     } else {
@@ -63,15 +59,13 @@ const request = async (method, path, data, extraHeaders = {}) => {
     }
   }
 
-  // Debug log
   if (process.env.NODE_ENV === 'development') {
     console.log(`${method} ${url}`, data || '');
   }
 
-  // Gọi API với timeout
   let response;
   try {
-    response = await fetchWithTimeout(url, options, 15000); // 15s timeout
+    response = await fetchWithTimeout(url, options, 15000);
   } catch (err) {
     if (err.message.includes('Failed to fetch')) {
       throw new Error('Không thể kết nối đến server. Vui lòng kiểm tra mạng hoặc backend.');
@@ -79,23 +73,34 @@ const request = async (method, path, data, extraHeaders = {}) => {
     throw err;
   }
 
-  // Xử lý các mã lỗi HTTP đặc biệt
   if (response.status === 401) {
-    Cookies.remove('tokenAdmin');
-    Cookies.remove('tokenUser');
-    throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+    try {
+      const newToken = await refreshToken('/api/v1/auth/refresh_token');
+      // Retry với token mới
+      options.headers.Authorization = `Bearer ${newToken}`;
+      response = await fetchWithTimeout(url, options, 15000);
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[Refresh success] Retried ${method} ${url}`);
+      }
+    } catch (refreshErr) {
+      Cookies.remove('token');
+      //================== Tạo error để throw ==============
+      const err = new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại');
+      err.status = 401; 
+      err.success = false;
+      throw err;
+    }
   }
 
   if (response.status === 404) {
     throw new Error('API không tồn tại (404).');
   }
 
-  // Nếu 204 (No Content) → return rỗng
   if (response.status === 204) {
     return null;
   }
 
-  // Parse theo content-type
   const contentType = response.headers.get('content-type');
   let parsed;
   try {
@@ -104,7 +109,7 @@ const request = async (method, path, data, extraHeaders = {}) => {
     } else if (contentType?.includes('text/')) {
       parsed = await response.text();
     } else {
-      parsed = await response.blob(); // file, image, csv...
+      parsed = await response.blob(); 
     }
   } catch {
     if (process.env.NODE_ENV === 'development') {
@@ -113,10 +118,11 @@ const request = async (method, path, data, extraHeaders = {}) => {
     throw new Error('Phản hồi không hợp lệ từ backend.');
   }
 
-  // Kiểm tra lỗi logic từ backend
   if (!response.ok) {
-    const msg = parsed?.message || `HTTP ${response.status}: ${response.statusText}`;
-    throw new Error(msg);
+    const err = new Error(parsed?.message || `HTTP ${response.status}: ${response.statusText}`);
+    err.success = parsed?.success ?? false;
+    err.status = parsed?.status ?? response.status;
+    throw err;
   }
 
   return parsed;
