@@ -26,7 +26,7 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { GET } from "../../../utils/requests";
+import { GET, POST } from "../../../utils/requests";
 
 const { Content, Sider } = Layout;
 const { Title, Text } = Typography;
@@ -151,8 +151,6 @@ const SearchResults = () => {
       setLoading(false);
     }
   };
-
-  console.log(flights);
 
   /* ============ FILTER ============= */
   const applyFilters = () => {
@@ -618,11 +616,47 @@ const SearchResults = () => {
                 <Button
                   type="primary"
                   block
+                  loading={loading}
                   style={{ fontSize: 16 }}
-                  onClick={() =>
+                  onClick={ async () => {
+                    setLoading(true);
+                    const totalPrice = payload.adults * selectedFlight.price.adult +
+                      payload.children * selectedFlight.price.child +
+                      payload.infants * selectedFlight.price.infant
+                    try {
+                      const payloadSession = {
+                        outbound_flight_id: selectedFlight.id,
+                        return_flight_id: payload.returnDate ? null : null,
+                        seat_class_name: payload.seatClass,
+                        passengers: [
+                          {type: "ADULT", count: payload.adults},
+                          {type: "CHILDREN", count: payload.children},
+                          {type: "INFANT", count: payload.infants},
+                        ],
+                        fare_price: {
+                          base_price: parseInt(selectedFlight.flightFares[0].base_price),
+                          service_fee: parseInt(selectedFlight.flightFares[0].service_fee),
+                          tax: parseInt(selectedFlight.flightFares[0].tax),
+                          total_price: totalPrice
+                        }
+                      }
+
+                      await POST(`/api/v1/flight-selection/create-session`, payloadSession);
+
+                    } catch (error) {
+                      messageApi.open({
+                        type: 'error',
+                        content: 'Có lỗi khi đặt vé. Vui lòng thử lại sau.',
+                      });
+                      navigate("/search-results");
+                      return;
+                    } finally {
+                      setLoading(false);
+                    }
                     navigate("/booking", {
                       state: { flight: selectedFlight, passengers: payload },
                     })
+                  }
                   }
                 >
                   Xác nhận
