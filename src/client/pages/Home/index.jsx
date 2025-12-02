@@ -43,6 +43,7 @@ const Home = () => {
   const [airports, setAirports] = useState([]);
   const [passengerVisible, setPassengerVisible] = useState(false);
   const [rotateSwap, setRotateSwap] = useState(false);
+  const [seatClass, setSeatClass] = useState([]);
   const [passengers, setPassengers] = useState({
     adults: 1,
     children: 0,
@@ -71,8 +72,13 @@ const Home = () => {
   useEffect(() => {
     const fetchAirports = async () => {
       try {
-        const result = await GET("/api/v1/airports");
-        setAirports(result.data);
+        const [airportsRes, seatClassRes] = await Promise.all([
+          GET("/api/v1/airports"),
+          GET("/api/v1/seat-classes"),
+        ]);
+
+        setAirports(airportsRes.data);
+        setSeatClass(seatClassRes.data);
       } catch (error) {
         messageApi.open({
           type: 'error',
@@ -357,12 +363,13 @@ const Home = () => {
 
                 <Col xs={24} md={12}>
                   <Form.Item name="seatClass" label="Hạng ghế">
-                    <Select size="large">
-                      <Option value="Economy">Phổ thông</Option>
-                      <Option value="Premium Economy">Phổ thông đặc biệt</Option>
-                      <Option value="Business">Thương gia</Option>
-                      <Option value="First">Hạng nhất</Option>
-                    </Select>
+                    <Select
+                      size="large"
+                      options={seatClass.map(item => ({
+                        label: item.class_name,
+                        value: item.class_name
+                      }))}
+                    />
                   </Form.Item>
                 </Col>
               </Row>
