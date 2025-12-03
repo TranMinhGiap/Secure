@@ -4,10 +4,9 @@ import { GET, PATCH } from "../../../utils/requests";
 import { CloseCircleOutlined, SmileOutlined, WarningOutlined, SettingOutlined } from "@ant-design/icons";
 const { Title } = Typography;
 
-// 🔹 Danh sách quyền (module + actions)
 const permissions = [
   {
-    label: "Danh mục sản phẩm",
+    label: "Máy bay",
     items: [
       { key: "products-category_view", label: "Xem" },
       { key: "products-category_create", label: "Thêm mới" },
@@ -16,7 +15,16 @@ const permissions = [
     ],
   },
   {
-    label: "Sản phẩm",
+    label: "Sân bay",
+    items: [
+      { key: "products_view", label: "Xem" },
+      { key: "products_create", label: "Thêm mới" },
+      { key: "products_edit", label: "Chỉnh sửa" },
+      { key: "products_delete", label: "Xóa" },
+    ],
+  },
+  {
+    label: "Hãng bay",
     items: [
       { key: "products_view", label: "Xem" },
       { key: "products_create", label: "Thêm mới" },
@@ -35,11 +43,7 @@ const permissions = [
     ],
   },
   {
-    label: "Dashboard",
-    items: [{ key: "dashboard_view", label: "Xem" }],
-  },
-  {
-    label: "Account",
+    label: "Tài khoản",
     items: [
       { key: "account_view", label: "Xem" },
       { key: "account_create", label: "Thêm mới" },
@@ -48,11 +52,8 @@ const permissions = [
     ],
   },
   {
-    label: "Setting",
-    items: [
-      { key: "setting_view", label: "Xem" },
-      { key: "setting_edit", label: "Cập nhật" },
-    ],
+    label: "Dashboard",
+    items: [{ key: "dashboard_view", label: "Xem" }],
   },
 ];
 
@@ -112,7 +113,6 @@ const RolePermissions = () => {
       .map((role, index) => {
         const originalPerms = originalRecords[index]?.permissions || [];
         const currentPerms = role.permissions || [];
-        // So sánh mảng bằng JSON để đơn giản 
         if (JSON.stringify(currentPerms.sort()) !== JSON.stringify(originalPerms.sort())) {
           return {
             id: role["_id"], 
@@ -165,11 +165,9 @@ const RolePermissions = () => {
     }
   };
 
-  //  Tạo dữ liệu hiển thị (module headers + actions) với rowKey
   const dataSource = [];
   let rowIndex = 0;
   permissions.forEach((group) => {
-    // Thêm hàng module header (không dùng colSpan nữa)
     dataSource.push({
       key: `module-${group.label}-${rowIndex++}`,
       type: "module",
@@ -180,13 +178,12 @@ const RolePermissions = () => {
       dataSource.push({
         key: `action-${item.key}-${rowIndex++}`,
         type: "action",
-        permissionKey: item.key, // Đổi tên để tránh conflict với key của row
+        permissionKey: item.key, 
         label: item.label,
       });
     });
   });
 
-  // Tính scroll.x chính xác: width cột đầu + width mỗi role column
   const featureColumnWidth = 200;
   const roleColumnWidth = 80;
   const scrollX = featureColumnWidth + (roleColumnWidth * records.length);
@@ -197,8 +194,8 @@ const RolePermissions = () => {
       title: "Tính năng",
       dataIndex: "label",
       width: featureColumnWidth,
-      fixed: "left", // Fixed left cho cột này
-      render: (_, record) => { // arg 1 là giá trị của dataIndex
+      fixed: "left",
+      render: (_, record) => {
         if (record.type === "module") {
           return (
             <Tag color="magenta" style={{ fontWeight: 600, fontSize: 13 }}>{record.name}</Tag>
@@ -214,11 +211,9 @@ const RolePermissions = () => {
       width: roleColumnWidth,
       render: (_, record) => {
         if (record.type === "module") {
-          // Cho module: empty cell, nhưng với background match để trông như span
           return (
             <div
             style={{ 
-                // backgroundColor: "#f5f5f5", 
                 height: "100%",
                 border: "none"
               }} 
@@ -229,7 +224,7 @@ const RolePermissions = () => {
         } else {
           return (
             <Checkbox
-              checked={role.permissions.includes(record.permissionKey)} // Sửa: dùng permissionKey
+              checked={role.permissions.includes(record.permissionKey)} 
               onChange={(e) =>
                 handleChange(roleIndex, record.permissionKey, e.target.checked)
               }

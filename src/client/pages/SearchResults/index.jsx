@@ -31,11 +31,6 @@ import { GET, POST } from "../../../utils/requests";
 const { Content, Sider } = Layout;
 const { Title, Text } = Typography;
 
-/* ======================
-    Helper Functions
-====================== */
-
-// "2h 15m" → phút
 const parseDuration = (str) => {
   if (!str) return 0;
   const [h, rest] = str.split("h");
@@ -43,17 +38,11 @@ const parseDuration = (str) => {
   return Number(h) * 60 + m;
 };
 
-// phút → "2h 15m"
 const formatDuration = (m) => `${Math.floor(m / 60)}h ${m % 60}m`;
 
 // Format VNĐ
 const formatPrice = (n) =>
   n.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
-
-
-/* ======================
-      MAIN COMPONENT
-====================== */
 
 const SearchResults = () => {
   const navigate = useNavigate();
@@ -90,10 +79,21 @@ const SearchResults = () => {
 
   const [sortType, setSortType] = useState("none");
 
+  // loading khi lọc / sắp xếp
+  const [loadingFilters, setLoadingFilters] = useState(false);
+
   /* ============ Fetch flights ============= */
   useEffect(() => {
     fetchFlights();
   }, []);
+
+  // tắt loadingFilters sau 400ms 
+  useEffect(() => {
+    if (loadingFilters) {
+      const timeout = setTimeout(() => setLoadingFilters(false), 400);
+      return () => clearTimeout(timeout);
+    }
+  }, [filters, sortType]);
 
   const fetchFlights = async () => {
     try {
@@ -106,13 +106,6 @@ const SearchResults = () => {
 
       const data = res.data;
       setFlights(data.flights || []);
-
-      // const res = await GET(`/fullSearch`);
-
-      // const data = res.data;
-      // const flightsList = data.flights || [];
-
-      // setFlights(flightsList);
 
       // Airline options
       const airlineList = Object.values(data.airlineData).map((a) => ({
@@ -223,17 +216,11 @@ const SearchResults = () => {
 
   const displayedFlights = applySort(applyFilters());
 
-
-  /* ====================================
-        RENDER
-  ==================================== */
-
   return (
     <>
       {contextHolder}
 
       <Layout style={{ minHeight: "100vh", background: "#f5f5f5" }}>
-
         {/* ========= SIDEBAR =========== */}
         <Sider width={280} style={{ background: "#fff", padding: 20 }}>
           <div
@@ -244,26 +231,45 @@ const SearchResults = () => {
               overflowY: "auto",
             }}
           >
-            <Title style={{ textAlign: 'center', color: 'green', marginTop: 10 }} level={4}>Bộ lọc chuyến bay</Title>
+            <Title
+              style={{ textAlign: "center", color: "green", marginTop: 10 }}
+              level={4}
+            >
+              Bộ lọc chuyến bay
+            </Title>
 
             {/* Airline */}
             <Divider>Hãng hàng không</Divider>
             <Checkbox.Group
               options={airlineOptions}
               value={filters.airline}
-              onChange={(v) => setFilters((p) => ({ ...p, airline: v }))}
+              onChange={(v) =>
+                setFilters((p) => {
+                  setLoadingFilters(true);
+                  return { ...p, airline: v };
+                })
+              }
               style={{ display: "flex", flexDirection: "column", gap: 6 }}
             />
 
             {/* Price */}
             <Divider>Giá vé</Divider>
             <Slider
-              style={{ width: "70%", marginLeft: "auto", marginRight: "auto" }}
+              style={{
+                width: "70%",
+                marginLeft: "auto",
+                marginRight: "auto",
+              }}
               range
               min={priceLimit[0]}
               max={priceLimit[1]}
               value={filters.priceRange}
-              onChange={(v) => setFilters((p) => ({ ...p, priceRange: v }))}
+              onChange={(v) =>
+                setFilters((p) => {
+                  setLoadingFilters(true);
+                  return { ...p, priceRange: v };
+                })
+              }
               marks={{
                 [priceLimit[0]]: formatPrice(priceLimit[0]),
                 [priceLimit[1]]: formatPrice(priceLimit[1]),
@@ -275,12 +281,19 @@ const SearchResults = () => {
             <Divider>Thời gian bay</Divider>
             <Slider
               range
-              style={{ width: "80%", marginLeft: "auto", marginRight: "auto" }}
+              style={{
+                width: "80%",
+                marginLeft: "auto",
+                marginRight: "auto",
+              }}
               min={durationLimit[0]}
               max={durationLimit[1]}
               value={filters.durationRange}
               onChange={(v) =>
-                setFilters((p) => ({ ...p, durationRange: v }))
+                setFilters((p) => {
+                  setLoadingFilters(true);
+                  return { ...p, durationRange: v };
+                })
               }
               marks={{
                 [durationLimit[0]]: formatDuration(durationLimit[0]),
@@ -293,7 +306,6 @@ const SearchResults = () => {
 
         {/* ========= CONTENT =========== */}
         <Content style={{ padding: "20px 40px" }}>
-
           {/* ===== HEADER ===== */}
           <Card style={{ marginBottom: 20 }}>
             <Row justify="space-between" align="middle">
@@ -320,11 +332,25 @@ const SearchResults = () => {
                   trigger="hover"
                   content={
                     <div>
-                      <div><Badge status="success" text="Người lớn" />: {payload.adults}</div>
-                      <div><Badge status="warning" text="Trẻ em" />: {payload.children}</div>
-                      <div><Badge status="error" text="Em bé" />: {payload.infants}</div>
-                      <hr/>
-                      <div>Hạng ghế: <Tag color='magenta' variant='filled'>{payload.seatClass}</Tag></div>
+                      <div>
+                        <Badge status="success" text="Người lớn" />:{" "}
+                        {payload.adults}
+                      </div>
+                      <div>
+                        <Badge status="warning" text="Trẻ em" />:{" "}
+                        {payload.children}
+                      </div>
+                      <div>
+                        <Badge status="error" text="Em bé" />:{" "}
+                        {payload.infants}
+                      </div>
+                      <hr />
+                      <div>
+                        Hạng ghế:{" "}
+                        <Tag color="magenta" variant="filled">
+                          {payload.seatClass}
+                        </Tag>
+                      </div>
                     </div>
                   }
                 >
@@ -347,42 +373,60 @@ const SearchResults = () => {
 
               <Button
                 type={sortType === "price-asc" ? "primary" : "default"}
-                onClick={() => setSortType("price-asc")}
+                onClick={() => {
+                  setSortType("price-asc");
+                  setLoadingFilters(true);
+                }}
               >
                 Giá thấp → cao
               </Button>
 
               <Button
                 type={sortType === "price-desc" ? "primary" : "default"}
-                onClick={() => setSortType("price-desc")}
+                onClick={() => {
+                  setSortType("price-desc");
+                  setLoadingFilters(true);
+                }}
               >
                 Giá cao → thấp
               </Button>
 
               <Button
                 type={sortType === "depart-asc" ? "primary" : "default"}
-                onClick={() => setSortType("depart-asc")}
+                onClick={() => {
+                  setSortType("depart-asc");
+                  setLoadingFilters(true);
+                }}
               >
                 Giờ đi sớm nhất
               </Button>
 
               <Button
                 type={sortType === "depart-desc" ? "primary" : "default"}
-                onClick={() => setSortType("depart-desc")}
+                onClick={() => {
+                  setSortType("depart-desc");
+                  setLoadingFilters(true);
+                }}
               >
                 Giờ đi muộn nhất
               </Button>
 
               <Button
                 type={sortType === "duration-asc" ? "primary" : "default"}
-                onClick={() => setSortType("duration-asc")}
+                onClick={() => {
+                  setSortType("duration-asc");
+                  setLoadingFilters(true);
+                }}
               >
                 Bay ngắn nhất
               </Button>
 
               <Button
                 type={sortType === "duration-desc" ? "primary" : "default"}
-                onClick={() => setSortType("duration-desc")}
+                onClick={() => {
+                  setSortType("duration-desc");
+                  setLoadingFilters(true);
+                }}
               >
                 Bay dài nhất
               </Button>
@@ -390,8 +434,7 @@ const SearchResults = () => {
           </Card>
 
           {/* ===== LIST RESULTS ===== */}
-
-          {loading ? (
+          {loading || loadingFilters ? (
             <>
               {[1, 2, 3].map((i) => (
                 <Card key={i} style={{ marginBottom: 16 }}>
@@ -411,21 +454,32 @@ const SearchResults = () => {
                   bodyStyle={{ padding: 24 }}
                 >
                   <Row justify="space-between" align="middle">
-
                     {/* Logo + tên hãng */}
-                    <div style={{ width: 240, display: "flex", gap: 12, alignItems: 'center' }}>
+                    <div
+                      style={{
+                        width: 240,
+                        display: "flex",
+                        gap: 12,
+                        alignItems: "center",
+                      }}
+                    >
                       <img
                         src={f.flight.airline.logo_url}
                         width={56}
                         height={56}
                         style={{
                           borderRadius: "50%",
-                          objectFit: "cover",
+                          objectFit: "contain",
+                          boxShadow:
+                            "rgba(149, 157, 165, 0.2) 0px 8px 24px",
                         }}
                         alt=""
                       />
                       <div>
-                        <Title level={5} style={{ marginBottom: 2, marginTop: 0 }}>
+                        <Title
+                          level={5}
+                          style={{ marginBottom: 2, marginTop: 0 }}
+                        >
                           {f.flight.airline.name}
                         </Title>
                         <Text type="secondary">
@@ -476,7 +530,10 @@ const SearchResults = () => {
                         textAlign: "right",
                       }}
                     >
-                      <Title level={4} style={{ color: "#00ab6b", marginTop: 0 }}>
+                      <Title
+                        level={4}
+                        style={{ color: "#00ab6b", marginTop: 0 }}
+                      >
                         {formatPrice(f.pricePerson)}
                       </Title>
                       <Button
@@ -495,6 +552,8 @@ const SearchResults = () => {
             />
           )}
         </Content>
+
+        {/* ========== DRAWER XÁC NHẬN ========== */}
         <Drawer
           placement="right"
           title="Xác nhận thông tin"
@@ -504,8 +563,13 @@ const SearchResults = () => {
           styles={{ body: { padding: 0, background: "#fff" } }}
         >
           {selectedFlight && (
-            <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
-
+            <div
+              style={{
+                position: "relative",
+                height: "100%",
+                overflow: "hidden",
+              }}
+            >
               {/* BODY – scrollable */}
               <div className="drawer-body-scroll">
                 {/* TAB + TITLE */}
@@ -529,7 +593,9 @@ const SearchResults = () => {
                   </div>
 
                   <Text type="secondary">
-                    {dayjs(payload.departureDate).format("dddd, DD MMM YYYY")}
+                    {dayjs(payload.departureDate).format(
+                      "dddd, DD MMM YYYY"
+                    )}
                   </Text>
                 </div>
 
@@ -542,7 +608,11 @@ const SearchResults = () => {
                       src={selectedFlight.flight.airline.logo_url}
                       width={48}
                       height={48}
-                      style={{ borderRadius: "50%", objectFit: "cover" }}
+                      style={{
+                        borderRadius: "50%",
+                        objectFit: "contain",
+                        boxShadow: "rgba(149, 157, 165, 0.2) 0px 8px 24px"
+                      }}
                       alt=""
                     />
                     <Title level={5} style={{ marginTop: 6 }}>
@@ -551,29 +621,56 @@ const SearchResults = () => {
                   </div>
 
                   {/* TIME LINE */}
-                  <Row justify="space-between" align="middle" style={{ marginTop: 20 }}>
-                    <Space direction="vertical" size={0} style={{ textAlign: "center" }}>
+                  <Row
+                    justify="space-between"
+                    align="middle"
+                    style={{ marginTop: 20 }}
+                  >
+                    <Space
+                      direction="vertical"
+                      size={0}
+                      style={{ textAlign: "center" }}
+                    >
                       <Title level={4} style={{ margin: 0 }}>
-                        {selectedFlight.departureTime.hour}:{selectedFlight.departureTime.minute}
+                        {selectedFlight.departureTime.hour}:
+                        {selectedFlight.departureTime.minute}
                       </Title>
                       <div className="airport-badge">
-                        {selectedFlight.flight.departureAirport.iata_code}
+                        {
+                          selectedFlight.flight.departureAirport
+                            .iata_code
+                        }
                       </div>
                     </Space>
 
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ width: 180, height: 2, background: "#d0d0d0", margin: "6px auto" }} />
+                      <div
+                        style={{
+                          width: 180,
+                          height: 2,
+                          background: "#d0d0d0",
+                          margin: "6px auto",
+                        }}
+                      />
                       <Text type="secondary">
                         {selectedFlight.duration} — Bay thẳng
                       </Text>
                     </div>
 
-                    <Space direction="vertical" size={0} style={{ textAlign: "center" }}>
+                    <Space
+                      direction="vertical"
+                      size={0}
+                      style={{ textAlign: "center" }}
+                    >
                       <Title level={4} style={{ margin: 0 }}>
-                        {selectedFlight.arrivalTime.hour}:{selectedFlight.arrivalTime.minute}
+                        {selectedFlight.arrivalTime.hour}:
+                        {selectedFlight.arrivalTime.minute}
                       </Title>
                       <div className="airport-badge">
-                        {selectedFlight.flight.arrivalAirport.iata_code}
+                        {
+                          selectedFlight.flight.arrivalAirport
+                            .iata_code
+                        }
                       </div>
                     </Space>
                   </Row>
@@ -585,29 +682,35 @@ const SearchResults = () => {
                 <Title level={5}>Chi tiết giá</Title>
 
                 <div>
-                  {payload.adults} người lớn × {formatPrice(selectedFlight.price.adult)}
+                  {payload.adults} người lớn ×{" "}
+                  {formatPrice(selectedFlight.price.adult)}
                 </div>
 
                 {payload.children > 0 && (
-                  <div>{payload.children} trẻ em × {formatPrice(selectedFlight.price.child)}</div>
+                  <div>
+                    {payload.children} trẻ em ×{" "}
+                    {formatPrice(selectedFlight.price.child)}
+                  </div>
                 )}
 
                 {payload.infants > 0 && (
-                  <div>{payload.infants} em bé × {formatPrice(selectedFlight.price.infant)}</div>
+                  <div>
+                    {payload.infants} em bé ×{" "}
+                    {formatPrice(selectedFlight.price.infant)}
+                  </div>
                 )}
               </div>
 
               {/* FOOTER – cố định dưới */}
               <div className="drawer-footer-fixed">
-
                 {/* TOTAL row */}
                 <div className="total-row">
                   <span>Tổng cộng</span>
                   <span>
                     {formatPrice(
                       payload.adults * selectedFlight.price.adult +
-                      payload.children * selectedFlight.price.child +
-                      payload.infants * selectedFlight.price.infant
+                        payload.children * selectedFlight.price.child +
+                        payload.infants * selectedFlight.price.infant
                     )}
                   </span>
                 </div>
@@ -618,55 +721,70 @@ const SearchResults = () => {
                   block
                   loading={loading}
                   style={{ fontSize: 16 }}
-                  onClick={ async () => {
+                  onClick={async () => {
                     setLoading(true);
-                    const totalPrice = payload.adults * selectedFlight.price.adult +
+                    const totalPrice =
+                      payload.adults * selectedFlight.price.adult +
                       payload.children * selectedFlight.price.child +
-                      payload.infants * selectedFlight.price.infant
+                      payload.infants * selectedFlight.price.infant;
                     try {
                       const payloadSession = {
                         outbound_flight_id: selectedFlight.id,
                         return_flight_id: payload.returnDate ? null : null,
                         seat_class_name: payload.seatClass,
                         passengers: [
-                          {type: "ADULT", count: payload.adults},
-                          {type: "CHILDREN", count: payload.children},
-                          {type: "INFANT", count: payload.infants},
+                          { type: "ADULT", count: payload.adults },
+                          { type: "CHILDREN", count: payload.children },
+                          { type: "INFANT", count: payload.infants },
                         ],
                         fare_price: {
-                          base_price: parseInt(selectedFlight.flightFares[0].base_price),
-                          service_fee: parseInt(selectedFlight.flightFares[0].service_fee),
-                          tax: parseInt(selectedFlight.flightFares[0].tax),
-                          total_price: totalPrice
-                        }
-                      }
+                          base_price: parseInt(
+                            selectedFlight.flightFares[0].base_price
+                          ),
+                          service_fee: parseInt(
+                            selectedFlight.flightFares[0].service_fee
+                          ),
+                          tax: parseInt(
+                            selectedFlight.flightFares[0].tax
+                          ),
+                          total_price: totalPrice,
+                        },
+                      };
 
-                      await POST(`/api/v1/flight-selection/create-session`, payloadSession);
+                      const res = await POST(
+                        `/api/v1/flight-selection/create-session`,
+                        payloadSession
+                      );
 
+                      navigate("/booking", {
+                        state: {
+                          flight: selectedFlight,
+                          passengers: payload,
+                          bookingSessionId:
+                            res.data.booking_session_id,
+                        },
+                      });
                     } catch (error) {
                       messageApi.open({
-                        type: 'error',
-                        content: 'Có lỗi khi đặt vé. Vui lòng thử lại sau.',
+                        type: "error",
+                        content:
+                          "Có lỗi khi đặt vé. Vui lòng thử lại sau.",
                       });
                       navigate("/search-results");
                       return;
                     } finally {
                       setLoading(false);
                     }
-                    navigate("/booking", {
-                      state: { flight: selectedFlight, passengers: payload },
-                    })
-                  }
-                  }
+                  }}
                 >
                   Xác nhận
                 </Button>
               </div>
-
             </div>
           )}
         </Drawer>
       </Layout>
+
       <style>
         {`
           .drawer-body-scroll {

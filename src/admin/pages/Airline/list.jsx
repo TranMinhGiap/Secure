@@ -70,7 +70,7 @@ const AirlineList = () => {
         navigate(location.pathname, { replace: true });
       }
       try {
-        const result = await GET("/airliness", params);
+        const result = await GET("/api/v1/airlines", params);
         console.log(result);
         setData(result.data);
         setPagination(prev => ({
@@ -99,7 +99,7 @@ const AirlineList = () => {
       render: (_, record) => (
         <Space>
           <Image
-            style={{ width: 70, aspectRatio: "1/1", objectFit: 'cover' }}
+            style={{ width: 70, aspectRatio: "1/1", objectFit: 'contain' }}
             src={record.logo_url ? record.logo_url : "error"}
             fallback={
               !record.logo_url
@@ -118,9 +118,9 @@ const AirlineList = () => {
     },
     { 
       title: 'Mã hãng', 
-      dataIndex: 'code',
+      dataIndex: 'iata_code',
       render: (_, record) => (
-        <Tag color="purple">{record.code}</Tag>
+        <Tag color="purple">{record.iata_code}</Tag>
       )
     },
     {

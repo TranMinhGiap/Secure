@@ -5,6 +5,8 @@ import Register from "../pages/Register";
 import SearchResults from "../pages/SearchResults";
 import Booking from "../pages/Booking";
 import OTPVerify from "../pages/OtpVerify";
+import Payment from "../pages/Payment";
+import VNPayReturn from "../pages/Payment/VNPayReturn";
 
 const routesClient = [
   {
@@ -23,6 +25,11 @@ const routesClient = [
         path: "booking",
         element: <Booking/>
       }
+      ,
+      {
+        path: '/vnpay/result',
+        element: <VNPayReturn/>
+      }
     ]
   },
   {
@@ -36,6 +43,10 @@ const routesClient = [
   {
     path: "/otp-verify",
     element: <OTPVerify />
+  },
+  {
+    path: "/payment",
+    element: <Payment />
   }
 ];
 

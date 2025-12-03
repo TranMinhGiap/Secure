@@ -68,7 +68,7 @@ const AirplaneList = () => {
         navigate(location.pathname, { replace: true });
       }
       try {
-        const result = await GET("/airplanes", params);
+        const result = await GET("/api/v1/airplanes", params);
         console.log(result);
         setData(result.data);
         setPagination(prev => ({
@@ -97,9 +97,9 @@ const AirplaneList = () => {
     },
     { 
       title: 'Sức chứa', 
-      dataIndex: 'seat_capacity',
+      dataIndex: 'total_seats',
       render: (_, record) => (
-        <Tag color="purple">{record.seat_capacity}</Tag>
+        <Tag color="purple">{record.total_seats}</Tag>
       )
     },
     { 
