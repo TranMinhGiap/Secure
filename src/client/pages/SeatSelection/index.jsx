@@ -38,11 +38,6 @@ const SeatSelectionDrawer = ({
   const [socket, setSocket] = useState(null);
   const [serverTotalSeatPrice, setServerTotalSeatPrice] = useState(null);
 
-<<<<<<< HEAD
-  // ===============================
-  // DANH SÁCH HÀNH KHÁCH CHỌN GHẾ 
-  // ===============================
-=======
   /* ===============================
      DANH SÁCH HÀNH KHÁCH CHỌN GHẾ 
      ===============================
@@ -51,7 +46,6 @@ const SeatSelectionDrawer = ({
   */
 
   // Dựa vào số lượng hành khách => chuẩn hóa thành 1 mảng object đại diện cho từng hành khách { lable: ..., type: ADULT / CHILD }
->>>>>>> 7c4d1ef (Add file vercel)
   const passengerList = useMemo(() => {
     const arr = [];
 
@@ -63,10 +57,7 @@ const SeatSelectionDrawer = ({
       arr.push({ label: `Trẻ em ${i + 1}`, type: "CHILD" });
     }
 
-<<<<<<< HEAD
-=======
     // Không push infant — không thay đổi UI nào khác
->>>>>>> 7c4d1ef (Add file vercel)
     return arr;
   }, [passengers]);
 
@@ -252,17 +243,11 @@ const SeatSelectionDrawer = ({
     onClose();
   };
 
-<<<<<<< HEAD
-  // ===============================
-  // LOADING UI
-  // ===============================
-=======
   /* ===============================
      LOADING UI
      =============================== */
 
   // Không có seatMap => hiển thị skeleton (OK)
->>>>>>> 7c4d1ef (Add file vercel)
   if (!seatMap) {
     return (
       <Drawer
