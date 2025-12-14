@@ -142,11 +142,8 @@ const Booking = () => {
 
     return {
       fullName: `${p.lastName} ${p.firstName}`.trim(),
-      lastName: p.lastName.trim(),
-      firstName: p.firstName.trim(),
       gender,
-      date_of_birth: p.dob ? p.dob.format("YYYY-MM-DD") : null, 
-      dob_display: p.dob ? p.dob.format("DD/MM/YYYY") : null,      
+      date_of_birth: p.dob ? p.dob.format("YYYY-MM-DD") : null,      
     };
   });
   
@@ -717,6 +714,7 @@ const Booking = () => {
           seatClass={passengers.seatClass || "ECONOMY"}
           value={{ passengerSeats: selectedSeats, totalSeatPrice: seatPrice }}
           onChange={handleSeatChange}
+          bookingSessionId={bookingSessionId}
         />
 
         {/* MODAL XÁC NHẬN */}

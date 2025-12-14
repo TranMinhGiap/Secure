@@ -11,11 +11,11 @@ import {
   message,
 } from "antd";
 import { GET } from "../../../utils/requests";
+import { io } from "socket.io-client";
 
 const { Title, Text } = Typography;
 
-const formatCurrency = (n) =>
-  `${(n || 0).toLocaleString("vi-VN")}₫`;
+const formatCurrency = (n) => `${(n || 0).toLocaleString("vi-VN")}₫`;
 
 const SeatSelectionDrawer = ({
   open,
@@ -25,6 +25,7 @@ const SeatSelectionDrawer = ({
   seatClass,         // "Economy" ...
   value,             // { passengerSeats, totalSeatPrice } (optional)
   onChange,          // callback khi ấn Done
+  bookingSessionId,
 }) => {
   const [messageApi, contextHolder] = message.useMessage();
   const [seatMap, setSeatMap] = useState(null);
@@ -34,33 +35,29 @@ const SeatSelectionDrawer = ({
   const [selectedSeats, setSelectedSeats] = useState(
     value?.passengerSeats || {}
   );
+  const [socket, setSocket] = useState(null);
+  const [serverTotalSeatPrice, setServerTotalSeatPrice] = useState(null);
 
-  /* ===============================
-     DANH SÁCH HÀNH KHÁCH CHỌN GHẾ 
-     ===============================
-     → Giữ nguyên UI
-     → Chỉ loại bỏ INFANT (không cần ghế)
-  */
+  // ===============================
+  // DANH SÁCH HÀNH KHÁCH CHỌN GHẾ 
+  // ===============================
   const passengerList = useMemo(() => {
     const arr = [];
 
-    // Người lớn
     for (let i = 0; i < (passengers?.adults || 0); i++) {
       arr.push({ label: `Người lớn ${i + 1}`, type: "ADULT" });
     }
 
-    // Trẻ em
     for (let i = 0; i < (passengers?.children || 0); i++) {
       arr.push({ label: `Trẻ em ${i + 1}`, type: "CHILD" });
     }
 
-    // ❌ Không push infant — không thay đổi UI nào khác
     return arr;
   }, [passengers]);
 
-  /* ===============================
-     MAPPING
-     =============================== */
+  // ===============================
+  // MAPPING
+  // ===============================
 
   const seatTypeMap = useMemo(() => {
     const map = {};
@@ -73,7 +70,8 @@ const SeatSelectionDrawer = ({
   const seatIndex = useMemo(() => {
     const map = {};
     seatMap?.seats?.forEach((s) => {
-      map[s.seatNumber] = s;
+      const flightSeatId = s.id || s.flightSeatId || s.seat_id;
+      map[s.seatNumber] = { ...s, id: flightSeatId };
     });
     return map;
   }, [seatMap]);
@@ -85,26 +83,53 @@ const SeatSelectionDrawer = ({
     }, 0);
   }, [selectedSeats, seatTypeMap]);
 
-
-  /* ===============================
-     LOAD SEAT MAP FROM API
-     =============================== */
+  // ===============================
+  // LOAD SEAT MAP FROM API
+  // ===============================
   useEffect(() => {
-    if (!open || !flight) return;
+    console.log("Drawer open:", open, "flight:", flight, "bookingSessionId:", bookingSessionId);
+    if (!open || !flight || !bookingSessionId) return;
+    console.log("Fetching seat map... bookingSessionId:", bookingSessionId);
     fetchSeatMap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, flight?.id, seatClass]);
+  }, [open, flight?.id, seatClass, bookingSessionId]);
+
+  // Manage socket connection lifecycle
+  useEffect(() => {
+    if (!open || !flight?.id || !bookingSessionId) return;
+
+    const s = io(process.env.REACT_APP_API_URL, {
+      transports: ["websocket"],
+      query: {
+        booking_session_id: bookingSessionId,
+        flight_schedule_id: flight.id,
+      },
+    });
+
+    s.on("seat:locked", () => fetchSeatMap());
+    s.on("seat:unlocked", () => fetchSeatMap());
+    s.on("seat:selected", () => fetchSeatMap());
+    s.on("seat:removed", () => fetchSeatMap());
+
+    setSocket(s);
+
+    return () => {
+      s.disconnect();
+      setSocket(null);
+    };
+  }, [open, flight?.id, bookingSessionId]);
 
   const fetchSeatMap = async () => {
     try {
       setLoading(true);
+      console.log("Fetching seat map for flight:", flight?.id, "seatClass:", seatClass);
 
       const res = await GET(
         `/api/v1/seats/frontend?flightScheduleId=${flight.id}&seat_class=${encodeURIComponent(
           seatClass || "ECONOMY"
         )}`
       );
-
+      console.log("Seat map data received:", res.data);
       setSeatMap(res.data);
     } catch (err) {
       console.error(err);
@@ -114,17 +139,17 @@ const SeatSelectionDrawer = ({
     }
   };
 
-
-  /* ===============================
-     CLICK GHẾ
-     =============================== */
+  // ===============================
+  // CLICK GHẾ
+  // ===============================
   const handleSeatClick = (seatNumber) => {
-    if (!seatIndex[seatNumber]) return;
     const seat = seatIndex[seatNumber];
+    if (!seat || typeof seat.status !== "string") return;
 
-    if (seat.status !== "AVAILABLE") return;
+    const status = seat.status.toLowerCase();
+    if (status !== "available") return;
 
-    // Tránh chọn ghế trùng cho hành khách khác
+    // Prevent selecting a seat already chosen by another passenger
     const taken = Object.entries(selectedSeats).find(
       ([idx, s]) => s.seatNumber === seatNumber && Number(idx) !== activePassenger
     );
@@ -133,27 +158,86 @@ const SeatSelectionDrawer = ({
       return;
     }
 
-    setSelectedSeats((prev) => {
-      const copy = { ...prev };
-      copy[activePassenger] = seat;
-      return copy;
-    });
+    if (!socket) {
+      // Fallback local update if socket not connected
+      setSelectedSeats((prev) => ({ ...prev, [activePassenger]: seat }));
+      return;
+    }
+
+    console.log("FE chọn ghế → sending flight_seat_id:", seat.id);
+
+    socket.emit(
+      "seat:select",
+      {
+        passenger_index: activePassenger,
+        flight_seat_id: seat.id, // backend expects flight_seat_id
+        account_id: null,
+      },
+      (resp) => {
+        if (!resp?.success) {
+          messageApi.error(resp?.message || "Chọn ghế thất bại");
+          return;
+        }
+
+        const result = resp.data;
+        const seatNum = result?.seat_selected?.seat_number;
+        const pickedSeat = seatIndex[seatNum];
+        if (pickedSeat) {
+          setSelectedSeats((prev) => ({ ...prev, [activePassenger]: pickedSeat }));
+        }
+        setServerTotalSeatPrice(result.flight_seat_subtotal ?? null);
+        fetchSeatMap();
+      }
+    );
   };
 
-  /* ===============================
-     DONE BUTTON
-     =============================== */
+  const handleRemoveSeat = (passengerIndex) => {
+    const current = selectedSeats[passengerIndex];
+    if (!current) return;
+
+    if (!socket) {
+      setSelectedSeats((prev) => {
+        const copy = { ...prev };
+        delete copy[passengerIndex];
+        return copy;
+      });
+      return;
+    }
+
+    socket.emit(
+      "seat:remove",
+      { passenger_index: passengerIndex },
+      (resp) => {
+        if (!resp?.success) {
+          messageApi.error(resp?.message || "Bỏ ghế thất bại");
+          return;
+        }
+        const result = resp.data;
+        setSelectedSeats((prev) => {
+          const copy = { ...prev };
+          delete copy[passengerIndex];
+          return copy;
+        });
+        setServerTotalSeatPrice(result.flight_seat_subtotal ?? null);
+        fetchSeatMap();
+      }
+    );
+  };
+
+  // ===============================
+  // DONE BUTTON
+  // ===============================
   const handleDone = () => {
     onChange?.({
       passengerSeats: selectedSeats,
-      totalSeatPrice,
+      totalSeatPrice: serverTotalSeatPrice ?? totalSeatPrice,
     });
     onClose();
   };
 
-  /* ===============================
-     LOADING UI
-     =============================== */
+  // ===============================
+  // LOADING UI
+  // ===============================
   if (!seatMap) {
     return (
       <Drawer
@@ -173,9 +257,6 @@ const SeatSelectionDrawer = ({
   const columns = layout.columns || [];
   const aisles = layout.aisles || [];
 
-  /* ===============================
-     FULL UI (GIỮ NGUYÊN 100%)
-     =============================== */
   return (
     <Drawer
       title="Chọn ghế ngồi"
@@ -210,6 +291,7 @@ const SeatSelectionDrawer = ({
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {passengerList.map((p, index) => {
               const seat = selectedSeats[index];
+              const isActive = activePassenger === index;
               return (
                 <div
                   key={index}
@@ -217,12 +299,8 @@ const SeatSelectionDrawer = ({
                   style={{
                     padding: "10px 12px",
                     borderRadius: 8,
-                    border:
-                      activePassenger === index
-                        ? "1px solid #1677ff"
-                        : "1px solid #eee",
-                    background:
-                      activePassenger === index ? "#e6f4ff" : "#fff",
+                    border: isActive ? "1px solid #1677ff" : "1px solid #eee",
+                    background: isActive ? "#e6f4ff" : "#fff",
                     cursor: "pointer",
                     display: "flex",
                     justifyContent: "space-between",
@@ -237,6 +315,18 @@ const SeatSelectionDrawer = ({
                       {seat ? `Ghế ${seat.seatNumber}` : "Chưa chọn ghế"}
                     </Text>
                   </div>
+                  {seat && (
+                    <Button
+                      size="small"
+                      danger
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveSeat(index);
+                      }}
+                    >
+                      Bỏ ghế
+                    </Button>
+                  )}
                 </div>
               );
             })}
@@ -245,7 +335,6 @@ const SeatSelectionDrawer = ({
 
         {/* RIGHT: SEAT MAP */}
         <Col span={18} style={{ padding: 16 }}>
-          {/* Legend giữ nguyên */}
           <CardLegend seatTypes={seatMap.seatTypes} />
 
           <Divider />
@@ -329,15 +418,37 @@ const SeatSelectionDrawer = ({
                         const seatNumber = `${rowNum}${col}`;
                         const seat = seatIndex[seatNumber];
                         const type = seatTypeMap[seat?.typeCode];
-                        const isSelected =
-                          selectedSeats[activePassenger]?.seatNumber ===
-                          seatNumber;
-                        const isUnavailable =
-                          !seat || seat.status !== "AVAILABLE";
 
-                        const bgColor = isUnavailable
-                          ? "#cbd5f5"
-                          : type?.color || "#e5e7eb";
+                        const isActive =
+                          selectedSeats[activePassenger]?.seatNumber === seatNumber;
+
+                        const isPicked = Object.entries(selectedSeats).some(
+                          ([idx, s]) =>
+                            s?.seatNumber === seatNumber &&
+                            Number(idx) !== activePassenger
+                        );
+
+                        const isUnavailable =
+                          !seat ||
+                          typeof seat.status !== "string" ||
+                          seat.status.toLowerCase() !== "available";
+
+                        let bgColor = type?.color || "#e5e7eb";
+                        if (isUnavailable) {
+                          bgColor = "#cbd5f5";
+                        } else if (isActive) {
+                          bgColor = "#ffe6cc";
+                        } else if (isPicked) {
+                          bgColor = "#d1fadf";
+                        }
+
+                        let pickedIndex = null;
+                        for (const [idx, s] of Object.entries(selectedSeats)) {
+                          if (s?.seatNumber === seatNumber) {
+                            pickedIndex = Number(idx);
+                            break;
+                          }
+                        }
 
                         return (
                           <div
@@ -351,25 +462,38 @@ const SeatSelectionDrawer = ({
                             <div
                               onClick={() => handleSeatClick(seatNumber)}
                               style={{
-                                width: 34,
-                                height: 34,
+                                width: isActive ? 40 : 34,
+                                height: isActive ? 40 : 34,
                                 borderRadius: 8,
                                 background: bgColor,
                                 opacity: isUnavailable ? 0.5 : 1,
                                 cursor: isUnavailable
                                   ? "not-allowed"
                                   : "pointer",
-                                border: isSelected
-                                  ? "2px solid #f97316"
-                                  : "1px solid #cbd5e1",
+                                border: isActive
+                                  ? "2.5px solid #f97316"
+                                  : isPicked
+                                    ? "2px solid #22c55e"
+                                    : "1px solid #cbd5e1",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                fontSize: 12,
-                                color: "#0f172a",
+                                fontSize: isActive ? 15 : 12,
+                                color: isActive ? "#d97706" : "#0f172a",
+                                fontWeight: isActive ? 700 : 500,
+                                transition:
+                                  "all 0.15s cubic-bezier(.4,2.2,.2,1)",
+                                boxShadow: isActive
+                                  ? "0 0 0 2px #ffd8b5"
+                                  : undefined,
+                                zIndex: isActive ? 2 : 1,
                               }}
                             >
-                              {isUnavailable ? "X" : col}
+                              {isUnavailable
+                                ? "X"
+                                : pickedIndex !== null
+                                  ? pickedIndex + 1
+                                  : col}
                             </div>
 
                             {aisles.includes(colIdx + 1) && (
@@ -396,7 +520,7 @@ const SeatSelectionDrawer = ({
               >
                 <Text>Tổng tiền ghế:</Text>
                 <Text strong style={{ fontSize: 16, color: "#f97316" }}>
-                  {formatCurrency(totalSeatPrice)}
+                  {formatCurrency(serverTotalSeatPrice ?? totalSeatPrice)}
                 </Text>
               </div>
             </>
@@ -407,9 +531,6 @@ const SeatSelectionDrawer = ({
   );
 };
 
-/* ===============================
-   LEGEND — GIỮ NGUYÊN
-   =============================== */
 const CardLegend = ({ seatTypes = [] }) => {
   return (
     <div

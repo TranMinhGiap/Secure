@@ -11,24 +11,24 @@ import VNPayReturn from "../pages/Payment/VNPayReturn";
 const routesClient = [
   {
     path: "/",
-    element: <ClientLayout/>,
+    element: <ClientLayout />,
     children: [
       {
         index: true,
-        element: <Home/>
+        element: <Home />
       },
       {
         path: "search-results",
-        element: <SearchResults/>
+        element: <SearchResults />
       },
       {
         path: "booking",
-        element: <Booking/>
+        element: <Booking />
       }
       ,
       {
         path: '/vnpay/result',
-        element: <VNPayReturn/>
+        element: <VNPayReturn />
       }
     ]
   },

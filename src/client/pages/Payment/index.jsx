@@ -24,7 +24,7 @@ const Payment = () => {
   const [secondsLeft, setSecondsLeft] = useState(30 * 60);
 
   // Phương thức thanh toán
-  const [paymentMethod, setPaymentMethod] = useState("store"); 
+  const [paymentMethod, setPaymentMethod] = useState("store");
 
   // Nếu không có state thì quay về home
   useEffect(() => {
@@ -90,7 +90,7 @@ const Payment = () => {
 
         console.log(res);
 
-        if (!res.paymentUrl) {  
+        if (!res.paymentUrl) {
           messageApi.open({
             type: 'error',
             content: 'Không tạo được URL thanh toán VNPay',
