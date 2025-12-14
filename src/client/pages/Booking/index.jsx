@@ -37,7 +37,7 @@ const Booking = () => {
 
   const [showPriceDetail, setShowPriceDetail] = useState(false);
   const [showSeatDrawer, setShowSeatDrawer] = useState(false);
-  const [selectedSeats, setSelectedSeats] = useState({});
+  const [selectedSeats, setSelectedSeats] = useState({});   // Ghế được chọn
   const [seatPrice, setSeatPrice] = useState(0);
   const [seatError, setSeatError] = useState("");
   const seatErrorRef = useRef(null);
@@ -50,6 +50,8 @@ const Booking = () => {
     ...Array(passengers.children).fill("Trẻ em"),
     ...Array(passengers.infants).fill("Em bé"),
   ];
+
+  // passengerList = [Người lớn, Người lớn, Trẻ em, Em bé]
 
   /* GIÁ */
   const basePrice =
@@ -73,7 +75,7 @@ const Booking = () => {
       await contactForm.validateFields();
       await passengerForm.validateFields();
 
-      // Chỉ Người lớn + Trẻ em mới cần ghế
+      // Chỉ Người lớn + Trẻ em mới cần ghế (seatRequiredIndexes là mảng chứa chỉ số của những khách bắt buộc phải chọn ghế)
       const seatRequiredIndexes = passengerList
         .map((type, idx) => ({ type, idx }))
         .filter(p => p.type !== "Em bé") // 
@@ -489,6 +491,7 @@ const Booking = () => {
                     width={48}
                     height={48}
                     style={{ borderRadius: "50%", objectFit: "contain", boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}
+                    alt=""
                   />
                   <div style={{ lineHeight: "20px" }}>
                     <Text strong>{flight.flight.airline.name}</Text>
@@ -648,6 +651,7 @@ const Booking = () => {
                       width={52}
                       height={52}
                       style={{ borderRadius: "50%", objectFit: "contain", boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}
+                      alt=""
                     />
                     <div>
                       <Text strong style={{ fontSize: 16 }}>{flight.flight.airline.name}</Text>
@@ -716,6 +720,8 @@ const Booking = () => {
           onChange={handleSeatChange}
           bookingSessionId={bookingSessionId}
         />
+
+        {/* HandleChange mới thay đổi lựa chọn ghế và thay đổi giá */}
 
         {/* MODAL XÁC NHẬN */}
         <Modal

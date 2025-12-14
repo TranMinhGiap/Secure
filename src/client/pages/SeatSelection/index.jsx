@@ -38,9 +38,20 @@ const SeatSelectionDrawer = ({
   const [socket, setSocket] = useState(null);
   const [serverTotalSeatPrice, setServerTotalSeatPrice] = useState(null);
 
+<<<<<<< HEAD
   // ===============================
   // DANH SÁCH HÀNH KHÁCH CHỌN GHẾ 
   // ===============================
+=======
+  /* ===============================
+     DANH SÁCH HÀNH KHÁCH CHỌN GHẾ 
+     ===============================
+     → Giữ nguyên UI
+     → Chỉ loại bỏ INFANT (không cần ghế)
+  */
+
+  // Dựa vào số lượng hành khách => chuẩn hóa thành 1 mảng object đại diện cho từng hành khách { lable: ..., type: ADULT / CHILD }
+>>>>>>> 7c4d1ef (Add file vercel)
   const passengerList = useMemo(() => {
     const arr = [];
 
@@ -52,6 +63,10 @@ const SeatSelectionDrawer = ({
       arr.push({ label: `Trẻ em ${i + 1}`, type: "CHILD" });
     }
 
+<<<<<<< HEAD
+=======
+    // Không push infant — không thay đổi UI nào khác
+>>>>>>> 7c4d1ef (Add file vercel)
     return arr;
   }, [passengers]);
 
@@ -59,6 +74,7 @@ const SeatSelectionDrawer = ({
   // MAPPING
   // ===============================
 
+  // Tạo ra cơ chế mapping => chỉ cần có mã loại ghế => tra ra được thông tin của loại ghế (giá , màu sắc, ...)
   const seatTypeMap = useMemo(() => {
     const map = {};
     seatMap?.seatTypes?.forEach((t) => {
@@ -67,6 +83,7 @@ const SeatSelectionDrawer = ({
     return map;
   }, [seatMap]);
 
+  // Cùng tạo ra cơ chế mapping => chỉ cần có số ghế => tra ra thông tin ghế (loại ghế, status, ...)
   const seatIndex = useMemo(() => {
     const map = {};
     seatMap?.seats?.forEach((s) => {
@@ -235,9 +252,17 @@ const SeatSelectionDrawer = ({
     onClose();
   };
 
+<<<<<<< HEAD
   // ===============================
   // LOADING UI
   // ===============================
+=======
+  /* ===============================
+     LOADING UI
+     =============================== */
+
+  // Không có seatMap => hiển thị skeleton (OK)
+>>>>>>> 7c4d1ef (Add file vercel)
   if (!seatMap) {
     return (
       <Drawer

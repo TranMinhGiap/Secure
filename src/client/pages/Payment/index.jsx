@@ -87,7 +87,6 @@ const Payment = () => {
           amount: totalPrice,
           booking_session_id: bookingSessionId,
         })
-
         console.log(res);
 
         if (!res.paymentUrl) {
